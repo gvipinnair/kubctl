@@ -1,10 +1,8 @@
-pipeline {
+\pipeline {
   agent any
-
   environment {
     IMAGE_NAME = "vipingnair/nginx"
   }
-
   stages {
     stage('Checkout') {
       steps {
@@ -12,9 +10,11 @@ pipeline {
         script {
           def commitMessage = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
           def versionTag = commitMessage.tokenize(':')[-1].trim()
-          if (!versionTag) error "Commit message doesn't contain a version tag"
+          if (!versionTag) {
+            error "Commit message doesn't contain a version tag (e.g., 'deploy: vipin7')"
+          }
           env.IMAGE_TAG = versionTag
-          echo "🛠 Using image tag: $IMAGE_TAG"
+          echo "🛠 Using image tag: ${IMAGE_TAG}"
         }
       }
     }
@@ -30,7 +30,7 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh '''
             echo "$DOCKER_PASS" | nerdctl login -u "$DOCKER_USER" --password-stdin
-            sudo nerdctl push $IMAGE_NAME:$IMAGE_TAG
+            nerdctl push $IMAGE_NAME:$IMAGE_TAG
           '''
         }
       }
