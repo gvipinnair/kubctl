@@ -50,6 +50,7 @@ pipeline {
             steps {
                 sh '''
                     echo "📦 Deploying to K8s with image $IMAGE_NAME:$IMAGE_TAG"
+                    echo "hi"
                     sed -i "s|image: .*|image: $IMAGE_NAME:$IMAGE_TAG|g" k8s/deployment.yaml
                     kubectl apply -f k8s/deployment.yaml
                 '''
