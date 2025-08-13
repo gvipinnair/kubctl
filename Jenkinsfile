@@ -30,7 +30,7 @@ pipeline {
         stage('Build Image') {
             steps {
                 sh '''
-                    nerdctl build -t $IMAGE_NAME:$IMAGE_TAG .
+                   sudo nerdctl build -t $IMAGE_NAME:$IMAGE_TAG .
                 '''
             }
         }
@@ -39,8 +39,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
-                        echo $DOCKER_PASS | nerdctl login -u $DOCKER_USER --password-stdin
-                        nerdctl push $IMAGE_NAME:$IMAGE_TAG
+                        echo $DOCKER_PASS | sudo  nerdctl login -u $DOCKER_USER --password-stdin
+                       sudo  nerdctl push $IMAGE_NAME:$IMAGE_TAG
                     '''
                 }
             }
