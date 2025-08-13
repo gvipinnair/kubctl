@@ -2,23 +2,45 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "vipingnair/nginx"
-        IMAGE_TAG = "test1" // You can automate this using GIT_COMMIT or build number
+        IMAGE_NAME = "vipingnair/nginx"
     }
 
     stages {
-        stage('Build Docker Image') {
+        stage('Checkout') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE:$IMAGE_TAG .'
+                git url: 'https://github.com/gvipinnair/kubctl.git', branch: 'main'
+
+                script {
+                    // Extract last commit message
+                    def commitMessage = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
+
+                    // Extract tag from message (assumes format like: deploy: version-tag)
+                    def versionTag = commitMessage.tokenize(':')[-1].trim()
+                    
+                    if (!versionTag) {
+                        error "Commit message doesn't contain a version tag (e.g., 'deploy: test1')"
+                    }
+
+                    env.IMAGE_TAG = versionTag
+                    echo "🛠 Using image tag: $IMAGE_TAG"
+                }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Build Image') {
+            steps {
+                sh '''
+                    nerdctl build -t $IMAGE_NAME:$IMAGE_TAG .
+                '''
+            }
+        }
+
+        stage('Push Image') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $DOCKER_IMAGE:$IMAGE_TAG
+                        echo $DOCKER_PASS | nerdctl login -u $DOCKER_USER --password-stdin
+                        nerdctl push $IMAGE_NAME:$IMAGE_TAG
                     '''
                 }
             }
@@ -26,7 +48,11 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f k8s/deployment.yaml'
+                sh '''
+                    echo "📦 Deploying to K8s with image $IMAGE_NAME:$IMAGE_TAG"
+                    sed -i "s|image: .*|image: $IMAGE_NAME:$IMAGE_TAG|g" k8s/deployment.yaml
+                    kubectl apply -f k8s/deployment.yaml
+                '''
             }
         }
     }
