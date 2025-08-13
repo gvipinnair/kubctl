@@ -30,7 +30,7 @@ pipeline {
         stage('Build Image') {
             steps {
                 sh '''
-                   sudo -S nerdctl build -t $IMAGE_NAME:$IMAGE_TAG .
+                   echo 'vipin@123' | sudo -S nerdctl build -t $IMAGE_NAME:$IMAGE_TAG .
                 '''
             }
         }
